@@ -34,6 +34,7 @@ public class TenantMapper {
       branch.getMotorcycleCapacity(),
       branch.getKeyRackCapacity(),
       branch.getHelmetLockerCapacity(),
+      Boolean.TRUE.equals(branch.getManageResources()),
       branch.isActive(),
       branch.getSchedules().stream()
         .sorted(Comparator.comparing(BranchSchedule::getDayOfWeek))

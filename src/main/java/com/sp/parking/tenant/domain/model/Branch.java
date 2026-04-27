@@ -23,6 +23,7 @@ public class Branch {
   private Integer motorcycleCapacity;
   private Integer keyRackCapacity;
   private Integer helmetLockerCapacity;
+  private Boolean manageResources;
   private boolean active;
 
   @ElementCollection(fetch = FetchType.EAGER)
@@ -41,6 +42,8 @@ public class Branch {
     if (motorcycleCapacity == null) motorcycleCapacity = 0;
     if (keyRackCapacity == null) keyRackCapacity = 0;
     if (helmetLockerCapacity == null) helmetLockerCapacity = 0;
+    if (manageResources == null) manageResources = Boolean.TRUE;
+    if (schedules == null) schedules = new ArrayList<>();
   }
 
   public void applyDefaults() {
@@ -48,6 +51,7 @@ public class Branch {
     if (motorcycleCapacity == null) motorcycleCapacity = 0;
     if (keyRackCapacity == null) keyRackCapacity = 0;
     if (helmetLockerCapacity == null) helmetLockerCapacity = 0;
+    if (manageResources == null) manageResources = Boolean.TRUE;
     if (schedules == null) schedules = new ArrayList<>();
   }
 

@@ -26,6 +26,7 @@ public final class TenantDtos {
     @Min(0) Integer motorcycleCapacity,
     @Min(0) Integer keyRackCapacity,
     @Min(0) Integer helmetLockerCapacity,
+    Boolean manageResources,
     @Valid List<ScheduleRequest> schedules
   ) {}
   public record ScheduleResponse(DayOfWeek dayOfWeek, LocalTime openTime, LocalTime closeTime, boolean closed) {}
@@ -40,6 +41,7 @@ public final class TenantDtos {
     int motorcycleCapacity,
     int keyRackCapacity,
     int helmetLockerCapacity,
+    boolean manageResources,
     boolean active,
     List<ScheduleResponse> schedules
   ) {}

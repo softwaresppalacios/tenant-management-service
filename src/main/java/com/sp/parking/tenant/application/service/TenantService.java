@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import java.time.DayOfWeek;
 import java.util.List;
 import java.util.UUID;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -61,6 +60,7 @@ public class TenantService {
     branch.setMotorcycleCapacity(zeroIfNull(request.motorcycleCapacity()));
     branch.setKeyRackCapacity(zeroIfNull(request.keyRackCapacity()));
     branch.setHelmetLockerCapacity(zeroIfNull(request.helmetLockerCapacity()));
+    branch.setManageResources(request.manageResources() == null ? Boolean.TRUE : request.manageResources());
     branch.getSchedules().clear();
     if (request.schedules() != null) {
       request.schedules().forEach(schedule -> branch.getSchedules().add(
@@ -82,7 +82,8 @@ public class TenantService {
   }
 
   private void validateSchedules(Branch branch) {
-    for (DayOfWeek day : DayOfWeek.values()) {
+    java.time.DayOfWeek[] days = java.time.DayOfWeek.values();
+    for (java.time.DayOfWeek day : days) {
       long count = branch.getSchedules().stream().filter(schedule -> schedule.getDayOfWeek() == day).count();
       if (count > 1) {
         throw new ResponseStatusException(BAD_REQUEST, "Schedule for day " + day + " is duplicated");
