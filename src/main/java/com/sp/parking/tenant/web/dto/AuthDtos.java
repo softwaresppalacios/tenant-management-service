@@ -24,7 +24,15 @@ public final class AuthDtos {
     @Size(max = 200) String branchAddress
   ) {}
 
-  public record UserResponse(UUID uuid, String fullName, String email) {}
+  public record ChangePasswordRequest(
+    @NotBlank(message = "Ingresa tu contraseña actual") String currentPassword,
+    @NotBlank(message = "Ingresa la nueva contraseña")
+    @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres")
+    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$", message = "La contraseña debe tener letras y números")
+    String newPassword
+  ) {}
+
+  public record UserResponse(UUID uuid, String fullName, String email, boolean mustChangePassword) {}
   public record TenantAccess(UUID uuid, String name, String role, String status, String planName, int branchLimit, int branchCount) {}
   public record AuthResponse(String token, Instant expiresAt, UserResponse user, List<TenantAccess> tenants) {}
   public record MeResponse(UserResponse user, List<TenantAccess> tenants) {}

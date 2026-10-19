@@ -59,7 +59,7 @@ public class TenantController {
     @PathVariable("branchUuid") UUID branchUuid,
     @Valid @RequestBody BranchConfigurationRequest request
   ) {
-    authService.requireMembership(AuthController.bearerToken(authorization), tenantUuid);
+    authService.requireRole(AuthController.bearerToken(authorization), tenantUuid, MembershipRole.OWNER, MembershipRole.ADMIN);
     return tenantService.updateBranchConfiguration(tenantUuid, branchUuid, request);
   }
 }

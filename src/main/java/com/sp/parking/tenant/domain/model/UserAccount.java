@@ -19,6 +19,9 @@ public class UserAccount {
   @Column(nullable = false)
   private String passwordHash;
   private boolean active;
+  /** La cuenta la creo el propietario con una clave temporal que el usuario debe cambiar al entrar. */
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean mustChangePassword;
   private Instant createdAt;
   private Instant lastLoginAt;
 

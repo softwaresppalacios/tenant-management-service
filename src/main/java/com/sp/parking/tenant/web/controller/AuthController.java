@@ -30,6 +30,15 @@ public class AuthController {
     return authService.me(bearerToken(authorization));
   }
 
+  @PostMapping("/change-password")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void changePassword(
+    @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+    @Valid @RequestBody ChangePasswordRequest request
+  ) {
+    authService.changePassword(bearerToken(authorization), request);
+  }
+
   @PostMapping("/logout")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void logout(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {

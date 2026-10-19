@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
@@ -75,6 +76,22 @@ public class AuthService {
     return new MeResponse(toUser(user), tenantsOf(user));
   }
 
+  /** Cambia la contraseña del usuario en sesion y cierra sus demas sesiones. */
+  @Transactional
+  public void changePassword(String token, ChangePasswordRequest request) {
+    UserSession session = requireSession(token);
+    UserAccount user = session.getUser();
+    if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+      throw new ResponseStatusException(BAD_REQUEST, "La contraseña actual no es correcta");
+    }
+    if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+      throw new ResponseStatusException(BAD_REQUEST, "La nueva contraseña debe ser diferente a la actual");
+    }
+    user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+    user.setMustChangePassword(false);
+    sessionRepository.revokeOthers(user.getId(), session.getId(), Instant.now());
+  }
+
   @Transactional
   public void logout(String token) {
     findSession(token).ifPresent(session -> {
@@ -95,6 +112,16 @@ public class AuthService {
     return membershipRepository.findByUserIdAndTenantUuid(user.getId(), tenantUuid)
       .map(TenantMembership::getRole)
       .orElseThrow(() -> new ResponseStatusException(FORBIDDEN, "No tienes acceso a este parqueadero"));
+  }
+
+  /** Como requireMembership, pero ademas exige uno de los roles indicados. */
+  @Transactional(readOnly = true)
+  public MembershipRole requireRole(String token, UUID tenantUuid, MembershipRole... allowed) {
+    MembershipRole role = requireMembership(token, tenantUuid);
+    if (!List.of(allowed).contains(role)) {
+      throw new ResponseStatusException(FORBIDDEN, "Tu rol no permite realizar esta acción");
+    }
+    return role;
   }
 
   @Transactional
@@ -150,10 +177,10 @@ public class AuthService {
   }
 
   private UserResponse toUser(UserAccount user) {
-    return new UserResponse(user.getUuid(), user.getFullName(), user.getEmail());
+    return new UserResponse(user.getUuid(), user.getFullName(), user.getEmail(), user.isMustChangePassword());
   }
 
-  private String normalizeEmail(String email) {
+  static String normalizeEmail(String email) {
     return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
   }
 
