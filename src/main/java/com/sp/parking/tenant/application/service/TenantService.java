@@ -28,16 +28,22 @@ public class TenantService {
 
   @Transactional
   public TenantResponse create(CreateTenantRequest request) {
+    return mapper.toResponse(createTenant(request.name(), request.branchAddress()));
+  }
+
+  /** Crea el parqueadero con su sede principal y horario por defecto. */
+  @Transactional
+  public Tenant createTenant(String name, String branchAddress) {
     SubscriptionPlan plan = planRepository.findByName("STARTER").orElseThrow();
-    Tenant tenant = Tenant.builder().name(request.name()).plan(plan).build();
+    Tenant tenant = Tenant.builder().name(name.trim()).plan(plan).build();
     Branch branch = Branch.builder()
-      .name("Sede principal")
-      .address(request.branchAddress())
+      .name(name.trim())
+      .address(branchAddress == null || branchAddress.isBlank() ? null : branchAddress.trim())
       .tenant(tenant)
       .build();
     branch.ensureWeekSchedule();
     tenant.getBranches().add(branch);
-    return mapper.toResponse(tenantRepository.save(tenant));
+    return tenantRepository.save(tenant);
   }
 
   @Transactional(readOnly = true)

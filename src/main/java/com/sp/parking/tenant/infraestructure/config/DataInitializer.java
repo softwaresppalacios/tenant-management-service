@@ -4,6 +4,7 @@ import com.sp.parking.tenant.domain.model.*;
 import com.sp.parking.tenant.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
@@ -13,8 +14,13 @@ import java.time.LocalTime;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
   private static final java.util.UUID DEMO_TENANT_ID = java.util.UUID.fromString("11111111-1111-1111-1111-111111111111");
+  private static final String DEMO_EMAIL = "admin@spparqueaderos.com";
+  private static final String DEMO_PASSWORD = "admin123";
   private final SubscriptionPlanRepository planRepository;
   private final TenantRepository tenantRepository;
+  private final UserAccountRepository userRepository;
+  private final TenantMembershipRepository membershipRepository;
+  private final PasswordEncoder passwordEncoder;
 
   @Override
   @Transactional
@@ -38,6 +44,21 @@ public class DataInitializer implements CommandLineRunner {
       tenant.getBranches().add(branch);
       tenantRepository.save(tenant);
     }
+    seedDemoUser();
+  }
+
+  /** Usuario demo real en base de datos, propietario del parqueadero demo. */
+  private void seedDemoUser() {
+    if (userRepository.existsByEmail(DEMO_EMAIL)) return;
+    UserAccount user = userRepository.save(UserAccount.builder()
+      .fullName("Administrador Principal")
+      .email(DEMO_EMAIL)
+      .passwordHash(passwordEncoder.encode(DEMO_PASSWORD))
+      .active(true)
+      .build());
+    tenantRepository.findByUuid(DEMO_TENANT_ID).ifPresent(tenant -> membershipRepository.save(
+      TenantMembership.builder().user(user).tenant(tenant).role(MembershipRole.OWNER).build()
+    ));
   }
 
   private void seedSchedule(Branch branch) {
