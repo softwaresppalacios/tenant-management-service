@@ -19,11 +19,15 @@ public class TenantService {
   private final TenantRepository tenantRepository;
   private final BranchRepository branchRepository;
   private final SubscriptionPlanRepository planRepository;
+  private final TenantMembershipRepository membershipRepository;
   private final TenantMapper mapper;
 
+  /** Solo los parqueaderos a los que el usuario tiene acceso. */
   @Transactional(readOnly = true)
-  public List<TenantResponse> findAll() {
-    return tenantRepository.findAll().stream().map(mapper::toResponse).toList();
+  public List<TenantResponse> findForUser(UserAccount user) {
+    return membershipRepository.findByUserIdWithTenant(user.getId()).stream()
+      .map(membership -> mapper.toResponse(membership.getTenant()))
+      .toList();
   }
 
   @Transactional

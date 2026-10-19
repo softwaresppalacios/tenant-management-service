@@ -20,6 +20,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
@@ -81,11 +82,19 @@ public class AuthService {
     });
   }
 
-  /** Devuelve el usuario de un token valido, o vacio si no hay token. Lanza 401 si el token no sirve. */
+  /** Devuelve el usuario de un token valido. Lanza 401 si no hay token o no sirve. */
   @Transactional(readOnly = true)
-  public Optional<UserAccount> optionalUser(String token) {
-    if (token == null || token.isBlank()) return Optional.empty();
-    return Optional.of(requireSession(token).getUser());
+  public UserAccount requireUser(String token) {
+    return requireSession(token).getUser();
+  }
+
+  /** Verifica que el usuario del token pertenezca al parqueadero. Lanza 401 sin sesion y 403 sin acceso. */
+  @Transactional(readOnly = true)
+  public MembershipRole requireMembership(String token, UUID tenantUuid) {
+    UserAccount user = requireUser(token);
+    return membershipRepository.findByUserIdAndTenantUuid(user.getId(), tenantUuid)
+      .map(TenantMembership::getRole)
+      .orElseThrow(() -> new ResponseStatusException(FORBIDDEN, "No tienes acceso a este parqueadero"));
   }
 
   @Transactional

@@ -13,7 +13,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -24,35 +23,43 @@ public class TenantController {
   private final AuthService authService;
   private final TenantMapper mapper;
 
+  /** Parqueaderos del usuario en sesion. */
   @GetMapping
-  public List<TenantResponse> all() {
-    return tenantService.findAll();
+  public List<TenantResponse> mine(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+    return tenantService.findForUser(authService.requireUser(AuthController.bearerToken(authorization)));
   }
 
-  /** Si llega con sesion, el usuario queda como propietario del parqueadero creado. */
+  /** El usuario en sesion queda como propietario del parqueadero creado. */
   @PostMapping
   @Transactional
   public TenantResponse create(
     @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
     @Valid @RequestBody CreateTenantRequest request
   ) {
-    Optional<UserAccount> user = authService.optionalUser(AuthController.bearerToken(authorization));
+    UserAccount owner = authService.requireUser(AuthController.bearerToken(authorization));
     Tenant tenant = tenantService.createTenant(request.name(), request.branchAddress());
-    user.ifPresent(owner -> authService.grantAccess(owner, tenant, MembershipRole.OWNER));
+    authService.grantAccess(owner, tenant, MembershipRole.OWNER);
     return mapper.toResponse(tenant);
   }
 
   @GetMapping("/{tenantUuid}/branches/{branchUuid}/configuration")
-  public BranchResponse branchConfiguration(@PathVariable("tenantUuid") UUID tenantUuid, @PathVariable("branchUuid") UUID branchUuid) {
+  public BranchResponse branchConfiguration(
+    @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+    @PathVariable("tenantUuid") UUID tenantUuid,
+    @PathVariable("branchUuid") UUID branchUuid
+  ) {
+    authService.requireMembership(AuthController.bearerToken(authorization), tenantUuid);
     return tenantService.getBranchConfiguration(tenantUuid, branchUuid);
   }
 
   @PutMapping("/{tenantUuid}/branches/{branchUuid}/configuration")
   public BranchResponse updateBranchConfiguration(
+    @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
     @PathVariable("tenantUuid") UUID tenantUuid,
     @PathVariable("branchUuid") UUID branchUuid,
     @Valid @RequestBody BranchConfigurationRequest request
   ) {
+    authService.requireMembership(AuthController.bearerToken(authorization), tenantUuid);
     return tenantService.updateBranchConfiguration(tenantUuid, branchUuid, request);
   }
 }
