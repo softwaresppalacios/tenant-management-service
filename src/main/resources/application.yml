@@ -20,3 +20,8 @@ spring:
 auth:
   # Horas que dura una sesion antes de pedir login de nuevo.
   session-hours: ${AUTH_SESSION_HOURS:12}
+
+services:
+  audit:
+    # reporting-audit-service: registro de auditoria de las acciones de los usuarios.
+    base-url: ${AUDIT_SERVICE_URL:http://localhost:8085/api}

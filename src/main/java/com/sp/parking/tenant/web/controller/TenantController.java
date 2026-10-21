@@ -1,5 +1,6 @@
 package com.sp.parking.tenant.web.controller;
 
+import com.sp.parking.tenant.infraestructure.client.AuditClient;
 import com.sp.parking.tenant.application.mapper.TenantMapper;
 import com.sp.parking.tenant.application.service.AuthService;
 import com.sp.parking.tenant.application.service.TenantService;
@@ -22,6 +23,7 @@ public class TenantController {
   private final TenantService tenantService;
   private final AuthService authService;
   private final TenantMapper mapper;
+  private final AuditClient auditClient;
 
   /** Parqueaderos del usuario en sesion. */
   @GetMapping
@@ -60,6 +62,11 @@ public class TenantController {
     @Valid @RequestBody BranchConfigurationRequest request
   ) {
     authService.requireRole(AuthController.bearerToken(authorization), tenantUuid, MembershipRole.OWNER, MembershipRole.ADMIN);
-    return tenantService.updateBranchConfiguration(tenantUuid, branchUuid, request);
+    BranchResponse saved = tenantService.updateBranchConfiguration(tenantUuid, branchUuid, request);
+    auditClient.record(tenantUuid, authorization, "BRANCH_UPDATE", "BRANCH", saved.name(), String.join(" · ",
+      "Carros " + saved.carCapacity(), "Motos " + saved.motorcycleCapacity(),
+      "Llaves " + saved.keyRackCapacity(), "Cascos " + saved.helmetLockerCapacity(),
+      saved.manageResources() ? "Asignación de espacios activa" : "Sin asignación de espacios"));
+    return saved;
   }
 }

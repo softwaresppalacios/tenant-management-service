@@ -1,5 +1,6 @@
 package com.sp.parking.tenant.web.controller;
 
+import com.sp.parking.tenant.infraestructure.client.AuditClient;
 import com.sp.parking.tenant.application.service.MemberService;
 import com.sp.parking.tenant.web.dto.MemberDtos.*;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MemberController {
   private final MemberService memberService;
+  private final AuditClient auditClient;
 
   @GetMapping
   public List<MemberResponse> list(
@@ -31,7 +33,9 @@ public class MemberController {
     @PathVariable("tenantUuid") UUID tenantUuid,
     @Valid @RequestBody CreateMemberRequest request
   ) {
-    return memberService.create(AuthController.bearerToken(authorization), tenantUuid, request);
+    MemberCreatedResponse created = memberService.create(AuthController.bearerToken(authorization), tenantUuid, request);
+    audit(tenantUuid, authorization, "MEMBER_ADD", created.member(), "Rol " + created.member().role() + (created.existingAccount() ? " · cuenta existente" : " · cuenta nueva con clave temporal"));
+    return created;
   }
 
   @PutMapping("/{userUuid}")
@@ -41,7 +45,9 @@ public class MemberController {
     @PathVariable("userUuid") UUID userUuid,
     @Valid @RequestBody UpdateMemberRequest request
   ) {
-    return memberService.updateRole(AuthController.bearerToken(authorization), tenantUuid, userUuid, request);
+    MemberResponse updated = memberService.updateRole(AuthController.bearerToken(authorization), tenantUuid, userUuid, request);
+    audit(tenantUuid, authorization, "MEMBER_UPDATE", updated, "Rol " + updated.role() + (updated.active() ? "" : " · desactivado"));
+    return updated;
   }
 
   @DeleteMapping("/{userUuid}")
@@ -51,7 +57,10 @@ public class MemberController {
     @PathVariable("tenantUuid") UUID tenantUuid,
     @PathVariable("userUuid") UUID userUuid
   ) {
-    memberService.remove(AuthController.bearerToken(authorization), tenantUuid, userUuid);
+    String token = AuthController.bearerToken(authorization);
+    MemberResponse removed = memberService.list(token, tenantUuid).stream().filter(member -> member.uuid().equals(userUuid)).findFirst().orElse(null);
+    memberService.remove(token, tenantUuid, userUuid);
+    if (removed != null) audit(tenantUuid, authorization, "MEMBER_REMOVE", removed, "Rol " + removed.role() + " · acceso retirado");
   }
 
   @PostMapping("/{userUuid}/reset-password")
@@ -61,6 +70,12 @@ public class MemberController {
     @PathVariable("userUuid") UUID userUuid,
     @Valid @RequestBody ResetPasswordRequest request
   ) {
-    return memberService.resetPassword(AuthController.bearerToken(authorization), tenantUuid, userUuid, request);
+    MemberResponse reset = memberService.resetPassword(AuthController.bearerToken(authorization), tenantUuid, userUuid, request);
+    audit(tenantUuid, authorization, "MEMBER_RESET_PASSWORD", reset, "Clave temporal asignada");
+    return reset;
+  }
+
+  private void audit(UUID tenantUuid, String authorization, String action, MemberResponse member, String details) {
+    auditClient.record(tenantUuid, authorization, action, "MEMBER", member.fullName() + " <" + member.email() + ">", details);
   }
 }
