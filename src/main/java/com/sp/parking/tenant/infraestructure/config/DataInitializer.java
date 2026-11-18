@@ -3,6 +3,7 @@ package com.sp.parking.tenant.infraestructure.config;
 import com.sp.parking.tenant.domain.model.*;
 import com.sp.parking.tenant.domain.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -22,11 +23,17 @@ public class DataInitializer implements CommandLineRunner {
   private final TenantMembershipRepository membershipRepository;
   private final PasswordEncoder passwordEncoder;
 
+  /** En produccion va en false (DEMO_DATA_ENABLED=false): no se crea el parqueadero ni el usuario demo con clave conocida. */
+  @Value("${app.demo-data.enabled:true}")
+  private boolean demoDataEnabled;
+
   @Override
   @Transactional
   public void run(String... args) {
+    // El plan se crea siempre: el registro de nuevos parqueaderos lo necesita.
     SubscriptionPlan starter = planRepository.findByName("STARTER")
       .orElseGet(() -> planRepository.save(SubscriptionPlan.builder().name("STARTER").branchLimit(2).monthlyTicketLimit(3000).active(true).build()));
+    if (!demoDataEnabled) return;
     if (tenantRepository.count() == 0) {
       Tenant tenant = Tenant.builder().uuid(DEMO_TENANT_ID).name("Centro Comercial Norte").plan(starter).build();
       Branch branch = Branch.builder()
