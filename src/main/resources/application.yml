@@ -17,3 +17,16 @@ spring:
   sql:
     init:
       mode: always
+auth:
+  # Horas que dura una sesion antes de pedir login de nuevo.
+  session-hours: ${AUTH_SESSION_HOURS:12}
+
+services:
+  audit:
+    # reporting-audit-service: registro de auditoria de las acciones de los usuarios.
+    base-url: ${AUDIT_SERVICE_URL:http://localhost:8085/api}
+
+app:
+  demo-data:
+    # Crea el parqueadero y el usuario demo (admin@spparqueaderos.com). En produccion: DEMO_DATA_ENABLED=false.
+    enabled: ${DEMO_DATA_ENABLED:true}

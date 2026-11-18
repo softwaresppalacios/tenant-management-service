@@ -19,25 +19,35 @@ public class TenantService {
   private final TenantRepository tenantRepository;
   private final BranchRepository branchRepository;
   private final SubscriptionPlanRepository planRepository;
+  private final TenantMembershipRepository membershipRepository;
   private final TenantMapper mapper;
 
+  /** Solo los parqueaderos a los que el usuario tiene acceso. */
   @Transactional(readOnly = true)
-  public List<TenantResponse> findAll() {
-    return tenantRepository.findAll().stream().map(mapper::toResponse).toList();
+  public List<TenantResponse> findForUser(UserAccount user) {
+    return membershipRepository.findByUserIdWithTenant(user.getId()).stream()
+      .map(membership -> mapper.toResponse(membership.getTenant()))
+      .toList();
   }
 
   @Transactional
   public TenantResponse create(CreateTenantRequest request) {
+    return mapper.toResponse(createTenant(request.name(), request.branchAddress()));
+  }
+
+  /** Crea el parqueadero con su sede principal y horario por defecto. */
+  @Transactional
+  public Tenant createTenant(String name, String branchAddress) {
     SubscriptionPlan plan = planRepository.findByName("STARTER").orElseThrow();
-    Tenant tenant = Tenant.builder().name(request.name()).plan(plan).build();
+    Tenant tenant = Tenant.builder().name(name.trim()).plan(plan).build();
     Branch branch = Branch.builder()
-      .name("Sede principal")
-      .address(request.branchAddress())
+      .name(name.trim())
+      .address(branchAddress == null || branchAddress.isBlank() ? null : branchAddress.trim())
       .tenant(tenant)
       .build();
     branch.ensureWeekSchedule();
     tenant.getBranches().add(branch);
-    return mapper.toResponse(tenantRepository.save(tenant));
+    return tenantRepository.save(tenant);
   }
 
   @Transactional(readOnly = true)
